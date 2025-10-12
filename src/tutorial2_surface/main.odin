@@ -1,4 +1,4 @@
-package main
+package tutorial2_surface
 
 import "core:c"
 import "core:fmt"

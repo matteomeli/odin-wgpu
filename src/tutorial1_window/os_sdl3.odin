@@ -1,0 +1,88 @@
+#+build !js
+package tutorial1_window
+
+import "core:c"
+import "core:fmt"
+import SDL "vendor:sdl3"
+
+OS :: struct {
+    window: ^SDL.Window,
+}
+
+os_init :: proc() {}
+
+os_get_framebuffer_size :: proc() -> (width, height: u32) {
+    w, h: i32
+    SDL.GetWindowSizeInPixels(state.os.window, &w, &h)
+    return u32(w), u32(h)
+}
+
+os_run :: proc() {
+    SDL.EnterAppMainCallbacks(0, nil, app_init, app_iterate, app_event, app_quit)
+}
+
+app_init :: proc "c" (app_state: ^rawptr, argc: c.int, argv: [^]cstring) -> SDL.AppResult {
+    context = state.ctx
+
+    if !SDL.SetAppMetadata(APP_TITLE, APP_VERSION, APP_IDENTIFIER) {
+        fmt.panicf("sdl.SetAppMetadata error: ", SDL.GetError())
+    }
+
+    if !SDL.Init({.VIDEO}) {
+        fmt.panicf("sdl.Init error: ", SDL.GetError())
+    }
+
+    state.os.window = SDL.CreateWindow(
+        APP_TITLE,
+        APP_INITIAL_WINDOW_WIDTH,
+        APP_INITIAL_WINDOW_HEIGHT,
+        {.RESIZABLE, .HIGH_PIXEL_DENSITY})
+
+    if state.os.window == nil {
+        fmt.panicf("sdl.CreateWindow error: ", SDL.GetError())
+    }
+
+    state.last_tick = SDL.GetPerformanceCounter()
+
+    return .CONTINUE
+}
+
+app_event :: proc "c" (app_state: rawptr, event: ^SDL.Event) -> SDL.AppResult {
+    context = state.ctx
+
+    #partial switch event.type {
+    case .QUIT:
+        return .SUCCESS
+    case .KEY_DOWN, .KEY_UP:
+        if event.key.key == SDL.K_ESCAPE {
+            quit_event: SDL.Event
+            quit_event.type = .QUIT
+            if !SDL.PushEvent(&quit_event) {
+                fmt.panicf("sdl.PushEvent error: ", SDL.GetError())
+            }
+        }
+    case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
+        resize()
+    }
+
+    return .CONTINUE;
+}
+
+app_iterate :: proc "c" (app_state: rawptr) -> SDL.AppResult {
+    context = state.ctx
+
+    now := SDL.GetPerformanceCounter()
+    dt := f32((now - state.last_tick) * 1000) / f32(SDL.GetPerformanceFrequency())
+    state.last_tick = now
+
+    frame(dt)
+
+    return .CONTINUE
+}
+
+app_quit :: proc "c" (app_state: rawptr, result: SDL.AppResult) {
+    context = state.ctx
+
+    SDL.DestroyWindow(state.os.window)
+    SDL.Quit()
+}
