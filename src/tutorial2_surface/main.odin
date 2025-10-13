@@ -1,9 +1,6 @@
 package tutorial2_surface
 
-import "core:c"
 import "core:fmt"
-import SDL "vendor:sdl3"
-import "vendor:wgpu/sdl3glue"
 import wgpu "vendor:wgpu"
 import runtime "base:runtime"
 
@@ -13,41 +10,29 @@ APP_VERSION :: "0.1.0"
 APP_INITIAL_WINDOW_WIDTH :: 1920
 APP_INITIAL_WINDOW_HEIGHT :: 1080
 
-State :: struct {
-    window: ^SDL.Window,
+state: struct {
+    ctx: runtime.Context,
+    os: OS,
+
+    last_tick: u64,
+
     instance: wgpu.Instance,
     surface: wgpu.Surface,
+    surface_config: wgpu.SurfaceConfiguration,
     adapter: wgpu.Adapter,
     device: wgpu.Device,
     queue: wgpu.Queue,
-    surface_config: wgpu.SurfaceConfiguration,
 }
 
-state_init :: proc(state: ^State) {
-    if !SDL.SetAppMetadata(APP_TITLE, APP_VERSION, APP_IDENTIFIER) {
-        fmt.panicf("sdl.SetAppMetadata error: ", SDL.GetError())
-    }
-
-    if !SDL.Init({.VIDEO}) {
-        fmt.panicf("sdl.Init error: ", SDL.GetError())
-    }
-
-    state.window = SDL.CreateWindow(
-        APP_TITLE,
-        APP_INITIAL_WINDOW_WIDTH,
-        APP_INITIAL_WINDOW_HEIGHT,
-        {.RESIZABLE, .HIGH_PIXEL_DENSITY})
-
-    if state.window == nil {
-        fmt.panicf("sdl.CreateWindow error: ", SDL.GetError())
-    }
+init :: proc "c" () {
+    context = state.ctx
 
     state.instance = wgpu.CreateInstance(nil)
     if state.instance == nil {
         panic("WebGPU is not supported")
     }
 
-    state.surface = get_surface(state.instance, state.window)
+    state.surface = os_get_surface(state.instance)
 
     wgpu.InstanceRequestAdapter(
         state.instance,
@@ -57,37 +42,33 @@ state_init :: proc(state: ^State) {
             powerPreference = .HighPerformance,
             backendType = .Vulkan,
         },
-        { callback = on_adapter, userdata1 = rawptr(state) })
+        { callback = on_adapter })
 
     on_adapter :: proc "c" (status: wgpu.RequestAdapterStatus, adapter: wgpu.Adapter, message: wgpu.StringView, userdata1: rawptr, userdata2: rawptr) {
-        context = runtime.default_context()
-
-        app := (^State)(userdata1)
+        context = state.ctx
 
         if status != .Success || adapter == nil {
             fmt.panicf("wgpu.InstanceRequestAdapter error: [%v] %s", status, message)
         }
-        app.adapter = adapter
+        state.adapter = adapter
 
-        wgpu.AdapterRequestDevice(app.adapter, nil, { callback = on_device, userdata1 = rawptr(app) })
+        wgpu.AdapterRequestDevice(adapter, nil, { callback = on_device })
     }
 
     on_device :: proc "c" (status: wgpu.RequestDeviceStatus, device: wgpu.Device, message: wgpu.StringView, userdata1: rawptr, userdata2: rawptr) {
-        context = runtime.default_context()
-
-        state := (^State)(userdata1)
+        context = state.ctx
 
         if status != .Success || device == nil {
             fmt.panicf("wgpu.AdapterRequestDevice error: [%v] %s", status, message)
         }
         state.device = device
 
-        width, height := get_framebuffer_size(state.window)
+        width, height := os_get_framebuffer_size()
 
         state.surface_config = {
             device = state.device,
             usage = { .RenderAttachment },
-            format = .BGRA8UnormSrgb,
+            format = .BGRA8Unorm,
             width = width,
             height = height,
             presentMode = .Fifo,
@@ -96,35 +77,36 @@ state_init :: proc(state: ^State) {
         wgpu.SurfaceConfigure(state.surface, &state.surface_config)
 
         state.queue = wgpu.DeviceGetQueue(state.device)
+
+        os_ready()
     }
 }
 
-state_key :: proc(state: ^State, event: SDL.KeyboardEvent) {
-    if event.key == SDL.K_ESCAPE {
-        quit_event: SDL.Event
-        quit_event.type = .QUIT
-        if !SDL.PushEvent(&quit_event) {
-            fmt.panicf("sdl.PushEvent error: ", SDL.GetError())
-        }
-    }
+resize :: proc "c" () {
+    context = state.ctx
+
+    state.surface_config.width, state.surface_config.height = os_get_framebuffer_size()
+    wgpu.SurfaceConfigure(state.surface, &state.surface_config)
 }
 
-Render_Result_Code :: enum {
+Frame_Result_Code :: enum {
     Ok,
     SurfaceNeedsUpdate,
     Error,
 }
 
-Render_Error :: struct {
+Frame_Error :: struct {
     message: string,
 }
 
-Render_Result :: struct {
-    code: Render_Result_Code,
-    error: Render_Error,
+Frame_Result :: struct {
+    code: Frame_Result_Code,
+    error: Frame_Error,
 }
 
-state_render :: proc(state: ^State) -> Render_Result {
+frame :: proc "c" (dt: f32) -> Frame_Result {
+    context = state.ctx
+
     surface_texture := wgpu.SurfaceGetCurrentTexture(state.surface)
     switch surface_texture.status {
     case .SuccessOptimal, .SuccessSuboptimal:
@@ -134,12 +116,12 @@ state_render :: proc(state: ^State) -> Render_Result {
         if surface_texture.texture != nil {
             wgpu.TextureRelease(surface_texture.texture)
         }
-        return Render_Result { code = Render_Result_Code.SurfaceNeedsUpdate }
+        return Frame_Result { code = Frame_Result_Code.SurfaceNeedsUpdate }
     case .OutOfMemory, .DeviceLost, .Error:
         // Something went wrong, can't keep going.
-        return Render_Result {
+        return Frame_Result {
             code = .Error,
-            error = Render_Error {
+            error = Frame_Error {
                 message = fmt.tprintf("wgpu.SurfaceGetCurrentTexture error (status = %v)", surface_texture.status)
             }
         }
@@ -175,92 +157,21 @@ state_render :: proc(state: ^State) -> Render_Result {
     wgpu.QueueSubmit(state.queue, { command_buffer })
     wgpu.SurfacePresent(state.surface)
 
-    return Render_Result { code = .Ok }
+    return Frame_Result { code = .Ok }
 }
 
-state_resize :: proc(state: ^State, width, height: u32) {
-    state.surface_config.width, state.surface_config.height = width, height
-    wgpu.SurfaceConfigure(state.surface, &state.surface_config)
-}
-
-state_quit :: proc(state: ^State) {
+finish :: proc() {
     wgpu.QueueRelease(state.queue)
     wgpu.DeviceRelease(state.device)
     wgpu.AdapterRelease(state.adapter)
     wgpu.SurfaceRelease(state.surface)
     wgpu.InstanceRelease(state.instance)
-
-    SDL.DestroyWindow(state.window)
-}
-
-app_init :: proc "c" (app_state: ^rawptr, argc: c.int, argv: [^]cstring) -> SDL.AppResult {
-    context = runtime.default_context()
-    state := new(State)
-    app_state^ = rawptr(state)
-
-    state_init(state)
-
-    return .CONTINUE
-}
-
-app_event :: proc "c" (app_state: rawptr, event: ^SDL.Event) -> SDL.AppResult {
-    context = runtime.default_context()
-
-    state := (^State)(app_state)
-
-    #partial switch event.type {
-    case .QUIT:
-        return .SUCCESS
-    case .KEY_DOWN, .KEY_UP:
-        state_key(state, event.key)
-    case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
-        width, height := get_framebuffer_size(state.window)
-        state_resize(state, width, height)
-    }
-
-    return .CONTINUE;
-}
-
-app_iterate :: proc "c" (app_state: rawptr) -> SDL.AppResult {
-    context = runtime.default_context()
-
-    state := (^State)(app_state)
-
-    render_result := state_render(state)
-    switch render_result.code {
-    case .Ok:
-    case .SurfaceNeedsUpdate:
-        width, height := get_framebuffer_size(state.window)
-        state_resize(state, width, height)
-    case .Error:
-        fmt.panicf("Render error: {}", render_result.error.message)
-    }
-
-    free_all(context.temp_allocator)
-
-    return .CONTINUE
-}
-
-app_quit :: proc "c" (app_state: rawptr, result: SDL.AppResult) {
-    context = runtime.default_context()
-
-    state := (^State)(app_state)
-
-    state_quit(state)
-
-    SDL.Quit()
-}
-
-get_surface :: proc(instance: wgpu.Instance, window: ^SDL.Window) -> wgpu.Surface {
-    return sdl3glue.GetSurface(instance, window)
-}
-
-get_framebuffer_size :: proc(window: ^SDL.Window) -> (width, height: u32) {
-    w, h: i32
-    SDL.GetWindowSizeInPixels(window, &w, &h)
-    return u32(w), u32(h)
 }
 
 main :: proc() {
-    SDL.EnterAppMainCallbacks(0, nil, app_init, app_iterate, app_event, app_quit)
+    state.ctx = context
+
+    os_init()
+
+    os_run()
 }

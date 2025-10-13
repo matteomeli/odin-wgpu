@@ -1,15 +1,29 @@
 #+build !js
-package tutorial1_window
+package tutorial2_surface
 
-import "core:c"
-import "core:fmt"
-import SDL "vendor:sdl3"
+import      "core:c"
+import      "core:fmt"
+import SDL  "vendor:sdl3"
+import      "vendor:wgpu/sdl3glue"
+import      "vendor:wgpu"
 
 OS :: struct {
     window: ^SDL.Window,
 }
 
 os_init :: proc() {}
+
+os_get_framebuffer_size :: proc() -> (width, height: u32) {
+    w, h: i32
+    SDL.GetWindowSizeInPixels(state.os.window, &w, &h)
+    return u32(w), u32(h)
+}
+
+os_get_surface :: proc(instance: wgpu.Instance) -> wgpu.Surface {
+    return sdl3glue.GetSurface(instance, state.os.window)
+}
+
+os_ready :: proc() {}
 
 os_run :: proc() {
     SDL.EnterAppMainCallbacks(0, nil, app_init, app_iterate, app_event, app_quit)
@@ -37,6 +51,8 @@ app_init :: proc "c" (app_state: ^rawptr, argc: c.int, argv: [^]cstring) -> SDL.
     }
 
     state.last_tick = SDL.GetPerformanceCounter()
+
+    init()
 
     return .CONTINUE
 }
@@ -69,13 +85,25 @@ app_iterate :: proc "c" (app_state: rawptr) -> SDL.AppResult {
     dt := f32((now - state.last_tick) * 1000) / f32(SDL.GetPerformanceFrequency())
     state.last_tick = now
 
-    frame(dt)
+    frame_result : = frame(dt)
+    switch frame_result.code {
+        case .Ok:
+        case .SurfaceNeedsUpdate:
+            fmt.println("resize 2")
+            resize()
+        case .Error:
+            fmt.panicf("Render error: {}", frame_result.error.message)
+    }
+
+    free_all(context.temp_allocator)
 
     return .CONTINUE
 }
 
 app_quit :: proc "c" (app_state: rawptr, result: SDL.AppResult) {
     context = state.ctx
+
+    finish()
 
     SDL.DestroyWindow(state.os.window)
     SDL.Quit()

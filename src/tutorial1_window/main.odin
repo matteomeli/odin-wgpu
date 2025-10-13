@@ -18,8 +18,6 @@ state: struct {
 resize :: proc "c" () {
     context = state.ctx
 
-    width, height := os_get_framebuffer_size()
-
     // We will fill this in the next tutorials
 }
 

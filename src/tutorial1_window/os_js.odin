@@ -12,12 +12,6 @@ os_init :: proc() {
     assert(ok)
 }
 
-os_get_framebuffer_size :: proc() -> (width, height: u32) {
-    rect := js.get_bounding_client_rect("body")
-    dpi := js.device_pixel_ratio()
-    return u32(f64(rect.width) * dpi), u32(f64(rect.height) * dpi)
-}
-
 // NOTE: frame loop is done by the odin.js repeatedly calling `step`.
 os_run :: proc() {
     state.os.initialized = true
