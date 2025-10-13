@@ -78,7 +78,7 @@ init :: proc "c" () {
 
         state.queue = wgpu.DeviceGetQueue(state.device)
 
-        os_ready()
+        os_mark_ready()
     }
 }
 

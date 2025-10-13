@@ -23,7 +23,9 @@ os_get_surface :: proc(instance: wgpu.Instance) -> wgpu.Surface {
     return sdl3glue.GetSurface(instance, state.os.window)
 }
 
-os_ready :: proc() {}
+os_mark_ready :: proc() {
+    // NOTE: Readiness is ensured by SDL3 main callbacks guaranteed order
+}
 
 os_run :: proc() {
     SDL.EnterAppMainCallbacks(0, nil, app_init, app_iterate, app_event, app_quit)

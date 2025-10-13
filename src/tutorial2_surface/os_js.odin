@@ -6,7 +6,7 @@ import "core:sys/wasm/js"
 import "vendor:wgpu"
 
 OS :: struct {
-    initialized: bool,
+    ready: bool,
 }
 
 os_init :: proc() {
@@ -34,8 +34,8 @@ os_get_surface :: proc(instance: wgpu.Instance) -> wgpu.Surface {
     )
 }
 
-os_ready :: proc() {
-    state.os.initialized = true
+os_mark_ready :: proc() {
+    state.os.ready = true
 }
 
 os_run :: proc() {
@@ -44,7 +44,7 @@ os_run :: proc() {
 
 @(private="file", export)
 step :: proc(dt: f32) -> bool {
-    if !state.os.initialized {
+    if !state.os.ready {
         return true
     }
 
