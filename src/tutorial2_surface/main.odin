@@ -10,6 +10,21 @@ APP_VERSION :: "0.1.0"
 APP_INITIAL_WINDOW_WIDTH :: 1920
 APP_INITIAL_WINDOW_HEIGHT :: 1080
 
+Frame_Result_Code :: enum {
+    Ok,
+    SurfaceNeedsUpdate,
+    Error,
+}
+
+Frame_Error :: struct {
+    message: string,
+}
+
+Frame_Result :: struct {
+    code: Frame_Result_Code,
+    error: Frame_Error,
+}
+
 state: struct {
     ctx: runtime.Context,
     os: OS,
@@ -22,10 +37,14 @@ state: struct {
     adapter: wgpu.Adapter,
     device: wgpu.Device,
     queue: wgpu.Queue,
+
+    clear_color: wgpu.Color
 }
 
 init :: proc "c" () {
     context = state.ctx
+
+    state.clear_color = { 0.39, 0.58, 0.93, 1 }    // Cornflower Blue
 
     state.instance = wgpu.CreateInstance(nil)
     if state.instance == nil {
@@ -89,21 +108,6 @@ resize :: proc "c" () {
     wgpu.SurfaceConfigure(state.surface, &state.surface_config)
 }
 
-Frame_Result_Code :: enum {
-    Ok,
-    SurfaceNeedsUpdate,
-    Error,
-}
-
-Frame_Error :: struct {
-    message: string,
-}
-
-Frame_Result :: struct {
-    code: Frame_Result_Code,
-    error: Frame_Error,
-}
-
 frame :: proc "c" (dt: f32) -> Frame_Result {
     context = state.ctx
 
@@ -143,7 +147,7 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
                 loadOp = .Clear,
                 storeOp = .Store,
                 depthSlice = wgpu.DEPTH_SLICE_UNDEFINED,
-                clearValue = { 0.39, 0.58, 0.93, 1 }    // Cornflower Blue
+                clearValue = state.clear_color
             }
         }
     )
@@ -158,6 +162,14 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
     wgpu.SurfacePresent(state.surface)
 
     return Frame_Result { code = .Ok }
+}
+
+window_event :: proc(event: WindowEvent) {
+    #partial switch event.kind {
+        case .MouseMoved:
+            state.clear_color.r = f64(event.mouse_moved.position.x) / f64(state.surface_config.width);
+            state.clear_color.g = f64(event.mouse_moved.position.y) / f64(state.surface_config.height);
+    }
 }
 
 finish :: proc() {

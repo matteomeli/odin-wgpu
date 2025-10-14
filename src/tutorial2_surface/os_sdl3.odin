@@ -69,6 +69,14 @@ app_event :: proc "c" (app_state: rawptr, event: ^SDL.Event) -> SDL.AppResult {
                 fmt.panicf("sdl.PushEvent error: ", SDL.GetError())
             }
         }
+    case .MOUSE_MOTION:
+        mouse_moved := WindowEvent {
+            mouse_moved = MouseMoved {
+                kind = .MouseMoved,
+                position = { f64(event.motion.x), f64(event.motion.y) }
+            }
+        }
+        window_event(mouse_moved)
     case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
         resize()
     }

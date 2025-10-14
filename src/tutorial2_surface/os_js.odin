@@ -31,6 +31,9 @@ os_run :: proc() {
     ok := js.add_window_event_listener(.Resize, nil, size_callback)
     assert(ok)
 
+    ok = js.add_window_event_listener(.Mouse_Move, nil, motion_callback)
+    assert(ok)
+
     init()
 
     // NOTE: Frame loop is done by the odin.js repeatedly calling `step`.
@@ -71,4 +74,16 @@ os_fini :: proc "contextless" () {
 @(private="file")
 size_callback :: proc(e: js.Event) {
     resize()
+}
+
+@(private="file")
+motion_callback :: proc(e: js.Event) {
+    dpi := js.device_pixel_ratio()
+    mouse_moved := WindowEvent {
+        mouse_moved = MouseMoved {
+            kind = .MouseMoved,
+            position = { f64(e.mouse.offset.x) * dpi, f64(e.mouse.offset.y) * dpi }
+        }
+    }
+    window_event(mouse_moved)
 }
