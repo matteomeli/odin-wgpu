@@ -9,13 +9,6 @@ OS :: struct {
     ready: bool,
 }
 
-os_init :: proc() {
-    ok := js.add_window_event_listener(.Resize, nil, size_callback)
-    assert(ok)
-
-    init()
-}
-
 os_get_framebuffer_size :: proc() -> (width, height: u32) {
     rect := js.get_bounding_client_rect("odin-wgpu")
     dpi := js.device_pixel_ratio()
@@ -34,12 +27,17 @@ os_get_surface :: proc(instance: wgpu.Instance) -> wgpu.Surface {
     )
 }
 
-os_mark_ready :: proc() {
-    state.os.ready = true
+os_run :: proc() {
+    ok := js.add_window_event_listener(.Resize, nil, size_callback)
+    assert(ok)
+
+    init()
+
+    // NOTE: Frame loop is done by the odin.js repeatedly calling `step`.
 }
 
-os_run :: proc() {
-    // NOTE: Frame loop is done by the odin.js repeatedly calling `step`.
+os_ready :: proc() {
+    state.os.ready = true
 }
 
 @(private="file", export)

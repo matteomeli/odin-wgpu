@@ -78,7 +78,7 @@ init :: proc "c" () {
 
         state.queue = wgpu.DeviceGetQueue(state.device)
 
-        os_mark_ready()
+        os_ready()
     }
 }
 
@@ -170,8 +170,6 @@ finish :: proc() {
 
 main :: proc() {
     state.ctx = context
-
-    os_init()
 
     os_run()
 }

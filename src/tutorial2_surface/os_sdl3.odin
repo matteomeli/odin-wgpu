@@ -11,8 +11,6 @@ OS :: struct {
     window: ^SDL.Window,
 }
 
-os_init :: proc() {}
-
 os_get_framebuffer_size :: proc() -> (width, height: u32) {
     w, h: i32
     SDL.GetWindowSizeInPixels(state.os.window, &w, &h)
@@ -23,13 +21,11 @@ os_get_surface :: proc(instance: wgpu.Instance) -> wgpu.Surface {
     return sdl3glue.GetSurface(instance, state.os.window)
 }
 
-os_mark_ready :: proc() {
-    // NOTE: Readiness is ensured by SDL3 main callbacks guaranteed order
-}
-
 os_run :: proc() {
     SDL.EnterAppMainCallbacks(0, nil, app_init, app_iterate, app_event, app_quit)
 }
+
+os_ready :: proc() {}
 
 app_init :: proc "c" (app_state: ^rawptr, argc: c.int, argv: [^]cstring) -> SDL.AppResult {
     context = state.ctx
