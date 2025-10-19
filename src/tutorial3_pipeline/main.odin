@@ -1,4 +1,4 @@
-package tutorial2_surface
+package tutorial3_pipeline
 
 import "core:fmt"
 import wgpu "vendor:wgpu"
@@ -37,6 +37,8 @@ state: struct {
     adapter: wgpu.Adapter,
     device: wgpu.Device,
     queue: wgpu.Queue,
+    shader: wgpu.ShaderModule,
+    render_pipeline: wgpu.RenderPipeline,
 
     clear_color: wgpu.Color
 }
@@ -44,7 +46,7 @@ state: struct {
 init :: proc "c" () {
     context = state.ctx
 
-    state.clear_color = { 0.122, 0.129, 0.157, 1 }
+    state.clear_color = { 0.122, 0.129, 0.157, 1 }    // Cornflower Blue
 
     state.instance = wgpu.CreateInstance(nil)
     if state.instance == nil {
@@ -96,6 +98,49 @@ init :: proc "c" () {
         wgpu.SurfaceConfigure(state.surface, &state.surface_config)
 
         state.queue = wgpu.DeviceGetQueue(state.device)
+
+        shader_code := #load("../../assets/shaders/shader.wgsl", string)
+        state.shader = wgpu.DeviceCreateShaderModule(state.device, &{
+            nextInChain = &wgpu.ShaderSourceWGSL {
+                sType = .ShaderSourceWGSL,
+                code = string(shader_code)
+            }
+        })
+
+        render_pipeline_layout := wgpu.DeviceCreatePipelineLayout(state.device, &wgpu.PipelineLayoutDescriptor {
+            label = "Render Pipeline Layout",
+            bindGroupLayoutCount = 0,
+            bindGroupLayouts = nil,
+        })
+
+        state.render_pipeline = wgpu.DeviceCreateRenderPipeline(device, &wgpu.RenderPipelineDescriptor {
+            label = "Render Pipeline",
+            layout = render_pipeline_layout,
+            vertex = {
+                module = state.shader,
+                entryPoint = "vs_main",
+            },
+            primitive = {
+                topology = .TriangleList,
+                stripIndexFormat = .Undefined,
+                frontFace = .CCW,
+                cullMode = .Back,
+            },
+            multisample = {
+                count = 1,
+                mask = 0xFFFFFFFF,
+                alphaToCoverageEnabled = false,
+            },
+            fragment = &{
+                module = state.shader,
+                entryPoint = "fs_main",
+                targetCount = 1,
+                targets = &wgpu.ColorTargetState {
+                    format = .BGRA8Unorm,
+                    writeMask = wgpu.ColorWriteMaskFlags_All,
+                }
+            },
+        })
 
         os_ready()
     }
@@ -152,6 +197,9 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
         }
     )
 
+    wgpu.RenderPassEncoderSetPipeline(render_pass, state.render_pipeline)
+    wgpu.RenderPassEncoderDraw(render_pass, vertexCount = 3, instanceCount = 1, firstVertex = 0, firstInstance = 0)
+
     wgpu.RenderPassEncoderEnd(render_pass)
     wgpu.RenderPassEncoderRelease(render_pass)
 
@@ -165,14 +213,12 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
 }
 
 window_event :: proc(event: WindowEvent) {
-    #partial switch event.kind {
-        case .MouseMoved:
-            state.clear_color.r = f64(event.mouse_moved.position.x) / f64(state.surface_config.width);
-            state.clear_color.g = f64(event.mouse_moved.position.y) / f64(state.surface_config.height);
-    }
+    // Nothing to see in here
 }
 
 finish :: proc() {
+    wgpu.RenderPipelineRelease(state.render_pipeline)
+    wgpu.ShaderModuleRelease(state.shader)
     wgpu.QueueRelease(state.queue)
     wgpu.DeviceRelease(state.device)
     wgpu.AdapterRelease(state.adapter)

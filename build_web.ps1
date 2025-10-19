@@ -55,6 +55,11 @@ $PAGE_SIZE            = 65536
 $INITIAL_MEMORY_BYTES = $INITIAL_MEMORY_PAGES * $PAGE_SIZE
 $MAX_MEMORY_BYTES     = $MAX_MEMORY_PAGES * $PAGE_SIZE
 
+if (!(Test-Path $WebPath)) {
+    Write-InfoMsg "Web folder not found. Creating web folder at $WebPath..."
+    New-Item -ItemType Directory -Path $WebPath | Out-Null
+}
+
 # Build with Odin
 Write-InfoMsg "Building project in `"$Folder`" with Odin..."
 Push-Location $SrcPath
@@ -84,9 +89,6 @@ if (!(Test-Path "$ODIN_ROOT/core/sys/wasm/js/odin.js")) {
 
 # Copy dependencies
 Write-CopyMsg "Copying dependencies to web folder..."
-if (!(Test-Path $WebPath)) {
-    New-Item -ItemType Directory -Path $WebPath | Out-Null
-}
 
 Copy-Item "$ODIN_ROOT/vendor/wgpu/wgpu.js" "$WebPath/wgpu.js" -Force
 if ($LASTEXITCODE -ne 0) {
@@ -101,6 +103,39 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Copy assets folder from repo root into web folder
+#$AssetsSrc = Join-Path $ScriptRoot 'assets'
+#$AssetsDst = Join-Path $WebPath 'assets'
+
+#if (Test-Path $AssetsSrc -PathType Container) {
+#    Write-CopyMsg "Copying assets folder to web/assets..."
+#    Copy-Item -Path $AssetsSrc\* -Destination $AssetsDst\ -Recurse  -Container
+#    if ($LASTEXITCODE -ne 0) {
+#        Write-ErrorMsg "Failed to copy assets folder!"
+#        Pop-Location
+#        exit 1
+#    }
+#} else {
+#    Write-InfoMsg "No assets folder was found at project root. Skipping assets copy."
+#}
+
+# Copy central index.html template into web folder
+$IndexTemplate = Join-Path $ScriptRoot 'templates\index.html'
+$IndexTarget   = Join-Path $WebPath 'index.html'
+
+if (Test-Path $IndexTemplate) {
+    Write-CopyMsg "Copying index.html template into web folder..."
+    Copy-Item $IndexTemplate $IndexTarget -Force
+    if ($LASTEXITCODE -ne 0) {
+        Write-ErrorMsg "Failed to copy index.html template!"
+        Pop-Location
+        exit 1
+    }
+} else {
+    Write-ErrorMsg "index.html template was not found at $IndexTemplate!"
+    Pop-Location
+    exit 1
+}
+
 Write-SuccessMsg "Build and copy tasks completed successfully for `"$Folder`"!"
 Pop-Location
-
