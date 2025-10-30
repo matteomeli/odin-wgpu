@@ -1,3 +1,4 @@
+#+build js
 package tutorial2_surface
 
 import "base:runtime"

@@ -34,6 +34,7 @@ function Write-CopyMsg($msg) {
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $SrcPath = Join-Path $ScriptRoot "src\$Folder"
+$LibsPath = Join-Path $ScriptRoot "libs"
 $WebPath = Join-Path $SrcPath "web"
 
 # Validate folder
@@ -55,15 +56,18 @@ $PAGE_SIZE            = 65536
 $INITIAL_MEMORY_BYTES = $INITIAL_MEMORY_PAGES * $PAGE_SIZE
 $MAX_MEMORY_BYTES     = $MAX_MEMORY_PAGES * $PAGE_SIZE
 
-if (!(Test-Path $WebPath)) {
-    Write-InfoMsg "Web folder not found. Creating web folder at $WebPath..."
-    New-Item -ItemType Directory -Path $WebPath | Out-Null
+# Always recreate web folder
+if (Test-Path $WebPath) {
+    Write-InfoMsg "Removing existing web folder at $WebPath..."
+    Remove-Item -Recurse -Force $WebPath
 }
+Write-InfoMsg "Creating web folder at $WebPath..."
+New-Item -ItemType Directory -Path $WebPath | Out-Null
 
 # Build with Odin
 Write-InfoMsg "Building project in `"$Folder`" with Odin..."
 Push-Location $SrcPath
-& odin.exe build . -target:js_wasm32 -out:web/program.wasm -o:size `
+& odin.exe build . -target:js_wasm32 -collection:libs=$LibsPath -out:web/program.wasm -o:size `
     -extra-linker-flags:"--export-table --import-memory --initial-memory=$INITIAL_MEMORY_BYTES --max-memory=$MAX_MEMORY_BYTES"
 
 if ($LASTEXITCODE -ne 0) {
@@ -102,22 +106,28 @@ if ($LASTEXITCODE -ne 0) {
     Pop-Location
     exit 1
 }
+Copy-Item "$LibsPath/io_utils/io_utils.js" "$WebPath/io_utils.js" -Force
+if ($LASTEXITCODE -ne 0) {
+    Write-ErrorMsg "Failed to copy io_utils.js!"
+    Pop-Location
+    exit 1
+}
 
 # Copy assets folder from repo root into web folder
-#$AssetsSrc = Join-Path $ScriptRoot 'assets'
-#$AssetsDst = Join-Path $WebPath 'assets'
+$AssetsSrc = Join-Path $ScriptRoot 'assets'
+$AssetsDst = Join-Path $WebPath 'assets'
 
-#if (Test-Path $AssetsSrc -PathType Container) {
-#    Write-CopyMsg "Copying assets folder to web/assets..."
-#    Copy-Item -Path $AssetsSrc\* -Destination $AssetsDst\ -Recurse  -Container
-#    if ($LASTEXITCODE -ne 0) {
-#        Write-ErrorMsg "Failed to copy assets folder!"
-#        Pop-Location
-#        exit 1
-#    }
-#} else {
-#    Write-InfoMsg "No assets folder was found at project root. Skipping assets copy."
-#}
+if (Test-Path $AssetsSrc -PathType Container) {
+    Write-CopyMsg "Copying assets folder to web/assets..."
+    Copy-Item -Path $AssetsSrc -Destination $AssetsDst -Recurse -Force
+    if ($LASTEXITCODE -ne 0) {
+        Write-ErrorMsg "Failed to copy assets folder!"
+        Pop-Location
+        exit 1
+    }
+} else {
+    Write-InfoMsg "No assets folder was found at project root. Skipping assets copy."
+}
 
 # Copy central index.html template into web folder
 $IndexTemplate = Join-Path $ScriptRoot 'templates\index.html'

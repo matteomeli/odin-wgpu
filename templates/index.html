@@ -22,14 +22,20 @@
 <canvas id="wgpu-canvas"></canvas>
 <script type="text/javascript" src="odin.js"></script>
 <script type="text/javascript" src="wgpu.js"></script>
+<script type="text/javascript" src="io_utils.js"></script>
 <script type="text/javascript">
     const mem = new WebAssembly.Memory({ initial: 2000, maximum: 65536, shared: false });
-    const memInterface = new odin.WasmMemoryInterface();
-    memInterface.setMemory(mem);
+    const wmi = new odin.WasmMemoryInterface();
+    wmi.setMemory(mem);
 
-    const wgpuInterface = new odin.WebGPUInterface(memInterface);
+    const wgpuInterface = new odin.WebGPUInterface(wmi);
 
-    odin.runWasm("program.wasm", null, { wgpu: wgpuInterface.getInterface() }, memInterface, /*intSize=8*/);
+    const extraForeignImports = {
+        wgpu: wgpuInterface.getInterface(),
+        io_utils: makeIOUtils(wmi),
+    };
+
+    odin.runWasm("program.wasm", null, extraForeignImports, wmi, /*intSize=8*/);
 </script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+#+build js
 package tutorial1_window
 
 import "base:runtime"

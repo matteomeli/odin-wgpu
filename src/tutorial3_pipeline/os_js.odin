@@ -1,3 +1,4 @@
+#+build js
 package tutorial3_pipeline
 
 import "base:runtime"
