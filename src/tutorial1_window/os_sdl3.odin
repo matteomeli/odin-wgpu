@@ -2,28 +2,34 @@
 package tutorial1_window
 
 import "core:c"
-import "core:fmt"
 import SDL "vendor:sdl3"
+import log "core:log"
 
 OS :: struct {
     window: ^SDL.Window,
 }
 
-os_init :: proc() {}
+os_init :: proc() {
+    log.info("Application started.")
+}
 
 os_run :: proc() {
     SDL.EnterAppMainCallbacks(0, nil, app_init, app_iterate, app_event, app_quit)
+}
+
+os_fini :: proc() {
+    log.info("Application ended.")
 }
 
 app_init :: proc "c" (app_state: ^rawptr, argc: c.int, argv: [^]cstring) -> SDL.AppResult {
     context = state.ctx
 
     if !SDL.SetAppMetadata(APP_TITLE, APP_VERSION, APP_IDENTIFIER) {
-        fmt.panicf("sdl.SetAppMetadata error: ", SDL.GetError())
+        log.panicf("sdl.SetAppMetadata error: ", SDL.GetError())
     }
 
     if !SDL.Init({.VIDEO}) {
-        fmt.panicf("sdl.Init error: ", SDL.GetError())
+        log.panicf("sdl.Init error: ", SDL.GetError())
     }
 
     state.os.window = SDL.CreateWindow(
@@ -33,8 +39,10 @@ app_init :: proc "c" (app_state: ^rawptr, argc: c.int, argv: [^]cstring) -> SDL.
         {.RESIZABLE, .HIGH_PIXEL_DENSITY})
 
     if state.os.window == nil {
-        fmt.panicf("sdl.CreateWindow error: ", SDL.GetError())
+        log.panicf("sdl.CreateWindow error: ", SDL.GetError())
     }
+
+    log.info("SDL Window created.")
 
     state.last_tick = SDL.GetPerformanceCounter()
 
@@ -52,7 +60,7 @@ app_event :: proc "c" (app_state: rawptr, event: ^SDL.Event) -> SDL.AppResult {
             quit_event: SDL.Event
             quit_event.type = .QUIT
             if !SDL.PushEvent(&quit_event) {
-                fmt.panicf("sdl.PushEvent error: ", SDL.GetError())
+                log.panicf("sdl.PushEvent error: ", SDL.GetError())
             }
         }
     case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:

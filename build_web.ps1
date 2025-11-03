@@ -130,7 +130,7 @@ if (Test-Path $AssetsSrc -PathType Container) {
 }
 
 # Copy central index.html template into web folder
-$IndexTemplate = Join-Path $ScriptRoot 'templates\index.html'
+$IndexTemplate = Join-Path $SrcPath 'index.html'
 $IndexTarget   = Join-Path $WebPath 'index.html'
 
 if (Test-Path $IndexTemplate) {

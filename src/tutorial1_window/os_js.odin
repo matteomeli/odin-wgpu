@@ -2,6 +2,7 @@
 package tutorial1_window
 
 import "base:runtime"
+import "core:log"
 import "core:sys/wasm/js"
 
 OS :: struct {
@@ -9,6 +10,8 @@ OS :: struct {
 }
 
 os_init :: proc() {
+    log.info("Application started.")
+
     ok := js.add_window_event_listener(.Resize, nil, size_callback)
     assert(ok)
 }
@@ -16,6 +19,8 @@ os_init :: proc() {
 // NOTE: frame loop is done by the odin.js repeatedly calling `step`.
 os_run :: proc() {
     state.os.initialized = true
+
+    log.info("WASM loop initialized.")
 }
 
 @(private="file", export)
@@ -29,10 +34,12 @@ step :: proc(dt: f32) -> bool {
     return true
 }
 
-@(private="file", fini)
+@(fini)
 os_fini :: proc "contextless" () {
     context = runtime.default_context()
     js.remove_window_event_listener(.Resize, nil, size_callback)
+
+    log.info("Application ended.")
 }
 
 @(private="file")

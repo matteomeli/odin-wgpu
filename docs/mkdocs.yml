@@ -20,7 +20,7 @@ theme:
       primary: teal
       accent: deep purple
   font:
-    text: Merriweather Sans
+    #text: Merriweather Sans
     code: JetBrains Mono
   icon:
     logo: simple/webgpu
@@ -33,6 +33,8 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/matteomeli
 copyright: Copyright &copy; 2025 Matteo Meli
+plugins:
+  - awesome-nav
 markdown_extensions:
   - admonition
   - attr_list
