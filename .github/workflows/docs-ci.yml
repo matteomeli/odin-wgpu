@@ -25,7 +25,8 @@ jobs:
           path: ~/.cache 
           restore-keys: |
             mkdocs-material-
-      - run: pip install mkdocs-material 
+      - run: pip install mkdocs-material
+      - run: pip install mkdocs-awesome-nav
       - name: MkDocs Build and Deploy
         working-directory: './docs'
         run: mkdocs gh-deploy --force
