@@ -27,7 +27,7 @@ Frame_Result :: struct {
     error: Frame_Error,
 }
 
-state: struct {
+State :: struct {
     ctx: runtime.Context,
     os: OS,
 
@@ -44,6 +44,8 @@ state: struct {
 
     clear_color: wgpu.Color
 }
+
+state: State
 
 init :: proc "c" () {
     context = state.ctx
@@ -219,11 +221,11 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
     return Frame_Result { code = .Ok }
 }
 
-window_event :: proc(event: WindowEvent) {
-// Nothing to see in here
+on_event :: proc(event: WindowEvent) {
+    // Nothing to do in here
 }
 
-finish :: proc() {
+fini :: proc() {
     wgpu.RenderPipelineRelease(state.render_pipeline)
     wgpu.ShaderModuleRelease(state.shader)
     wgpu.QueueRelease(state.queue)

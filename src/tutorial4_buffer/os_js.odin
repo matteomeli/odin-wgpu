@@ -69,7 +69,7 @@ os_fini :: proc "contextless" () {
     context = runtime.default_context()
     js.remove_window_event_listener(.Resize, nil, size_callback)
 
-    finish()
+    fini()
 }
 
 @(private="file")
@@ -86,5 +86,5 @@ motion_callback :: proc(e: js.Event) {
             position = { f64(e.mouse.offset.x) * dpi, f64(e.mouse.offset.y) * dpi }
         }
     }
-    window_event(mouse_moved)
+    on_event(mouse_moved)
 }

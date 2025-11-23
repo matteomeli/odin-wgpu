@@ -76,7 +76,7 @@ app_event :: proc "c" (app_state: rawptr, event: ^SDL.Event) -> SDL.AppResult {
                 position = { f64(event.motion.x), f64(event.motion.y) }
             }
         }
-        window_event(mouse_moved)
+        on_event(mouse_moved)
     case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
         resize()
     }
@@ -109,7 +109,7 @@ app_iterate :: proc "c" (app_state: rawptr) -> SDL.AppResult {
 app_quit :: proc "c" (app_state: rawptr, result: SDL.AppResult) {
     context = state.ctx
 
-    finish()
+    fini()
 
     SDL.DestroyWindow(state.os.window)
     SDL.Quit()

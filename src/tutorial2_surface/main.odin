@@ -25,7 +25,7 @@ Frame_Result :: struct {
     error: Frame_Error,
 }
 
-state: struct {
+State :: struct {
     ctx: runtime.Context,
     os: OS,
 
@@ -41,7 +41,9 @@ state: struct {
     clear_color: wgpu.Color
 }
 
-init :: proc "c" () {
+state: State
+
+init :: proc() {
     context = state.ctx
 
     state.clear_color = { 0.122, 0.129, 0.157, 1 }
@@ -101,14 +103,14 @@ init :: proc "c" () {
     }
 }
 
-resize :: proc "c" () {
+resize :: proc() {
     context = state.ctx
 
     state.surface_config.width, state.surface_config.height = os_get_framebuffer_size()
     wgpu.SurfaceConfigure(state.surface, &state.surface_config)
 }
 
-frame :: proc "c" (dt: f32) -> Frame_Result {
+frame :: proc(dt: f32) -> Frame_Result {
     context = state.ctx
 
     surface_texture := wgpu.SurfaceGetCurrentTexture(state.surface)
@@ -164,7 +166,7 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
     return Frame_Result { code = .Ok }
 }
 
-window_event :: proc(event: WindowEvent) {
+on_event :: proc(event: WindowEvent) {
     #partial switch event.kind {
         case .MouseMoved:
             state.clear_color.r = f64(event.mouse_moved.position.x) / f64(state.surface_config.width);
@@ -172,7 +174,7 @@ window_event :: proc(event: WindowEvent) {
     }
 }
 
-finish :: proc() {
+fini :: proc() {
     wgpu.QueueRelease(state.queue)
     wgpu.DeviceRelease(state.device)
     wgpu.AdapterRelease(state.adapter)

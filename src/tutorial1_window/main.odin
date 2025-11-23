@@ -9,28 +9,27 @@ APP_VERSION :: "0.1.0"
 APP_INITIAL_WINDOW_WIDTH :: 1920
 APP_INITIAL_WINDOW_HEIGHT :: 1080
 
-state: struct {
+State :: struct {
     ctx: runtime.Context,
     os: OS,
-
     last_tick: u64,
 }
 
-/*
-Handles window resize operations.
-*/
-resize :: proc "c" () {
-    context = state.ctx
+state: State
 
+init :: proc() {
     // We will fill this in the next tutorials
 }
 
-/*
-Contains the rendering instructions to generate each frame.
-*/
-frame :: proc "c" (dt: f32) {
-    context = state.ctx
+resize :: proc() {
+    // We will fill this in the next tutorials
+}
 
+frame :: proc(dt: f32) {
+    // We will fill this in the next tutorials
+}
+
+fini :: proc() {
     // We will fill this in the next tutorials
 }
 

@@ -25,7 +25,7 @@ Frame_Result :: struct {
     error: Frame_Error,
 }
 
-state: struct {
+State :: struct {
     ctx: runtime.Context,
     os: OS,
 
@@ -43,7 +43,9 @@ state: struct {
     clear_color: wgpu.Color
 }
 
-init :: proc "c" () {
+state: State
+
+init :: proc() {
     context = state.ctx
 
     state.clear_color = { 0.122, 0.129, 0.157, 1 }    // Cornflower Blue
@@ -146,14 +148,14 @@ init :: proc "c" () {
     }
 }
 
-resize :: proc "c" () {
+resize :: proc() {
     context = state.ctx
 
     state.surface_config.width, state.surface_config.height = os_get_framebuffer_size()
     wgpu.SurfaceConfigure(state.surface, &state.surface_config)
 }
 
-frame :: proc "c" (dt: f32) -> Frame_Result {
+frame :: proc(dt: f32) -> Frame_Result {
     context = state.ctx
 
     surface_texture := wgpu.SurfaceGetCurrentTexture(state.surface)
@@ -212,11 +214,11 @@ frame :: proc "c" (dt: f32) -> Frame_Result {
     return Frame_Result { code = .Ok }
 }
 
-window_event :: proc(event: WindowEvent) {
-    // Nothing to see in here
+on_event :: proc(event: WindowEvent) {
+    // Nothing to do in here
 }
 
-finish :: proc() {
+fini :: proc() {
     wgpu.RenderPipelineRelease(state.render_pipeline)
     wgpu.ShaderModuleRelease(state.shader)
     wgpu.QueueRelease(state.queue)
