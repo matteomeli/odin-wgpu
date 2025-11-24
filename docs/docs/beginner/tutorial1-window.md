@@ -1,4 +1,5 @@
-﻿# Dependencies and the Window
+﻿
+# Dependencies and the Window
 
 In this tutorial we want to support both web and native targets. Odin's `wgpu` supports WASM by providing wrappers around the browser native WebGPU API, while for all other targets [wgpu-native](https://github.com/gfx-rs/wgpu-native) is used.
 
@@ -25,13 +26,13 @@ $ cd odin_wgpu/src/tutorial1_window
 
 Inside the `odin_wgpu/src/tutorial1_window` folder than create a file `main.odin` in your favourite IDE. For now, just paste the code below:
 
-```odinlang
+``` odinlang title="main.odin"
 package main
 
 import "core:fmt"
 
 main :: proc() {
-    fmt.println("Hellope!")
+    fmt.println("Hello World!")
 }
 ```
 
@@ -39,18 +40,16 @@ To build and run the program:
 
 ```
 $ cd odin_wgpu
-$ odin.exe run ./src/tutorial1_window -out:bin/tutorial1_window.exe
-Hellope!
+$ odin.exe run src/tutorial1_window -out:bin/tutorial1_window.exe
+Hello World!
 ```
 If you see the output presented above, everything is set up correctly.
-
-At this point you can decide yourself what IDE you want to use, or don't use one at all, and how to compile the program. I have used free Jetbrains' IDE [IntelliJ Idea](https://www.jetbrains.com/idea/) with the awesome [Odin plugin](https://plugins.jetbrains.com/plugin/22933-odin-support) to create this tutorial series. Another option is [VS Code](https://code.visualstudio.com/) with the [Odin Language Server](https://marketplace.visualstudio.com/items?itemName=DanielGavin.ols) plugin. Or anything else you like.
 
 ## Scaffolding the code
 
 We are going to need a place to put all of our state, so let's create a `State` struct and add a global variable `state` of that type. We also define a few constants for our application.
 
-```odinlang title="main.odin" linenums="1"
+``` odinlang title="main.odin" linenums="1"
 package tutorial1_window
 
 import "base:runtime"
@@ -71,7 +70,7 @@ state: State
 ```
 We also create the scaffolding functions where we will add all the WGPU calls.
 
-```odinlang title="main.odin" linenums="1"
+``` odinlang title="main.odin" linenums="1"
 init :: proc() {
     // We will fill this in the next tutorials
 }
@@ -88,9 +87,9 @@ fini :: proc() {
     // We will fill this in the next tutorials
 }
 ```
-You might have noticed one of the member variables of the `State` struct is declared as `OS` but it's not defined here. We define it in a file that will contain everything that is SDL specific.
+You might have noticed one of the member variables of the `State` struct is declared as `OS` but it's not defined here. We define it in a file that will contain everything that is SDL specific called `os_sdl3.odin`.
 
-```odinlang title="os_sdl3.odin" linenums="1"
+``` odinlang title="os_sdl3.odin" linenums="1"
 package tutorial1_window
 
 import "core:c"
@@ -184,7 +183,7 @@ app_quit :: proc "c" (app_state: rawptr, result: SDL.AppResult) {
 
 Finally, we orchestrate everything from the `main` function.
 
-```odinlang
+``` odinlang title="main.odin" linenums="1"
 main :: proc() {
     state.ctx = context
 
@@ -196,11 +195,13 @@ main :: proc() {
 }
 ```
 
-This is the simple start of our program leading up to the `main` function.
-
 ## Logger
 
-```odinlang
+Let's add a logger to our program.
+
+``` odinlang title="main.odin" linenums="1" hl_lines="1 4-5 15"
+import log "core:log"
+
 main :: proc() {
     logger := log.create_console_logger()
     context.logger = logger
@@ -216,8 +217,9 @@ main :: proc() {
     log.destroy_console_logger(logger)
 }
 ```
+Odin's `log` package is very simple and straightforward to use. The interface is the same as the one of the standard library's `fmt` package, so it's as easy as substituting `fmt` for `log` everywhere in the code we have so far.
 
-```odinlang
+``` odinlang title="os_sdl3.odin" linenums="1" hl_lines="1 4 8 15 19 29 32 50"
 import log "core:log"
 
 os_init :: proc() {
@@ -279,6 +281,34 @@ app_event :: proc "c" (app_state: rawptr, event: ^SDL.Event) -> SDL.AppResult {
 ```
 
 ## Compile and run
+
+At this point you can decide yourself what IDE you want to use, or don't use one at all. I have used free Jetbrains' IDE [IntelliJ Idea](https://www.jetbrains.com/idea/) with the awesome [Odin plugin](https://plugins.jetbrains.com/plugin/22933-odin-support) to create this tutorial series. Another option is [VS Code](https://code.visualstudio.com/) with the [Odin Language Server](https://marketplace.visualstudio.com/items?itemName=DanielGavin.ols) plugin. Or anything else you like.
+
+In general, to compile and build your program with Odin outside an IDE, you can use the `odin.exe build` or `odin.exe run` commands. Usually, it's sufficient to pass use `odin.exe run .` to build and run the program in the current folder. Remember that Odin thinks in terms of directory-based packages. The `odin.exe build <dir>` command takes all the files in the directory `<dir>`, compiles them into a package and then turns that into an executable. You can also tell it to treat a single file as a complete package, by adding `-file`, like so:
+
+```
+odin.exe run main.odin -file
+```
+
+A souple of useful switches are:
+
+* `-out`, which allows you to specify the output file name.
+* `-debug`, which enables debugging symbols.
+
+If you just want to build the program without running it, use the `odin.exe build` command and switches, instead. Passing the `--help` switch to `run` and `build` commands will show you all the available switches.
+
+To compile and run the program:
+
+```
+$ odin.exe run src/tutorial1_window -debug -out:bin/tutorial1_window.exe
+```
+
+If you want to build the program without running it, run the following commands and the executable will be created in the `bin` folder:
+
+```
+$ odin.exe build src/tutorial1_window -debug -out:bin/tutorial1_window.exe
+```
+
 
 ## Add support for the web
 
