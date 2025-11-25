@@ -1,21 +1,18 @@
-﻿
 # Dependencies and the Window
 
 In this tutorial we want to support both web and native targets. Odin's `wgpu` supports WASM by providing wrappers around the browser native WebGPU API, while for all other targets [wgpu-native](https://github.com/gfx-rs/wgpu-native) is used.
 
-## Native
+## Native vs WASM
 
 For native targets, just using an `import "vendor:wgpu"` statement in your Odin program will suffice. WGPU needs a target surface to attach to and doesn't provide itself a way to do it, because obtaining a surface is platform dependent. WGPU is only an API that concern itself with GPU functionality, it doesn't provide any interface with the underlying OS, like window management, input handing, events, etc. Odin provides two options for that, SDL and GLFW. We will go with SDL latest version, SDL3, using a `import "vendor:sdl3"` statement in our program. Odin also provides a *glue* package to gel together WGPU and SDL which allows to obtain a `wgpu.Surface` that can be consumed by WGPU from a pointer to a `SDL.Window`. We will do this using an `import "vendor:wgpu/sdl3glue"` statement in our program.
 
 Odin doesn't have a package management system and using libraries usually just means to have `import` statements in the program. In order to link our program to SDL3 correctly though, we will have to copy manually the file SDL3.dll from `<Odin SDK path>\vendor\sdl3\` into the output folder where your programs is built into, e.g. `bin`. The output folder can be specified passing a `-out` switch to Odin compiler.
 
-## WASM
-
 For WASM, the process is a little more involved. The program has to be built with a function table to enable callbacks, this is done passing `-extra-linker-flags:"--export-table"` to the compiler. To instruct the compiler to target WAS use the `-target:js_wasm32` switch. The program entry point will be a html file, and it could be helpful to have a build script to avoid having to write by hand all the right flags to the compiler all the time.
 
 To make this easy while following along the tutorial, an `index.html` file and a Powershell script to build for WASM is provided.
 
-## Create project
+## Create the Project
 
 Make sure is Odin properly installed in your system. Then, creating an Odin project is as simple as creating a folder. Odin programs consist of packages. A package is a directory of Odin code files, all of which have the same package declaration at the top. Odin doesn't dictate a specific folder organization, so we will go for a root folder `odin_wgpu` for the project, and a `src` folder within it for all the code of the various tutorials. `tutorial1_window` will be the name of this first tutorial.
 
@@ -26,7 +23,7 @@ $ cd odin_wgpu/src/tutorial1_window
 
 Inside the `odin_wgpu/src/tutorial1_window` folder than create a file `main.odin` in your favourite IDE. For now, just paste the code below:
 
-``` odinlang title="main.odin"
+``` odinlang title="main.odin" linenums="1"
 package main
 
 import "core:fmt"
@@ -45,7 +42,7 @@ Hello World!
 ```
 If you see the output presented above, everything is set up correctly.
 
-## Scaffolding the code
+## Scaffolding the Code
 
 We are going to need a place to put all of our state, so let's create a `State` struct and add a global variable `state` of that type. We also define a few constants for our application.
 
